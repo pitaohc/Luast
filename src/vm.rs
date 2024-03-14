@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use crate::bytecode::ByteCode;
-use crate::parse::ParseProto;
+use crate::parse::{get_const, ParseProto};
 use crate::value::Value;
 
 /// 虚拟机状态
@@ -26,7 +26,8 @@ impl ExeState {
         for code in proto.byte_codes.iter() {
             match *code {
                 ByteCode::GetGlobal(dst, name) => {
-                    let name = &proto.constants[name as usize];
+
+                    let name = get_const(&proto.constants, name as usize);
                     if let Value::String(key) = name {
                         // 模式匹配,如果name是String类型,则将name作为key从全局变量表中取出对应的值
                         let v = self.globals.get(key).unwrap_or(&Value::Nil).clone();
@@ -36,7 +37,7 @@ impl ExeState {
                     }
                 }
                 ByteCode::LoadConst(dst, c) => {
-                    let v= proto.constants[c as usize].clone(); //从常量表中取出常量
+                    let v = get_const(&proto.constants, c as usize).clone();
                     self.set_stack(dst, v);
                 }
                 ByteCode::Call(func, _) => {
@@ -47,6 +48,17 @@ impl ExeState {
                         panic!("invalid function: {func:?}");
                     }
                 }
+
+                ByteCode::LoadNil(dst) => {
+                    self.set_stack(dst, Value::Nil);
+                }
+                ByteCode::LoadBool(dst, b) => {
+                    self.set_stack(dst, Value::Boolean(b));
+                }
+                ByteCode::LoadInt(dst, i) => {
+                    self.set_stack(dst, Value::Integer(i as i64));
+                }
+                _ => panic!("unimplemented: {:?}", code)
             }
         }
     }
