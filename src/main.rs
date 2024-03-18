@@ -22,7 +22,7 @@ fn main() {
     /*
     通过语法分析获得字节码
     */
-    let proto = parse::load(file);
+    let proto = parse::ParseProto::load(file);
     /*
     新建一个虚拟机执行字节码
     &proto 传递proto的引用

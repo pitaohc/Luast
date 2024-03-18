@@ -5,7 +5,7 @@ mod tests {
 
     #[test]
     fn test_lex() {
-        let file = File::open("test_lua/print_more_values.lua").unwrap();
+        let file = File::open("test_lua/local_variables.lua").unwrap();
         let proto = parse::ParseProto::load(file);
         let mut vm = vm::ExeState::new();
         vm.execute(&proto);

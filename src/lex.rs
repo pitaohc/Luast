@@ -1,6 +1,7 @@
+use std::fmt::Display;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
-use std::mem;
+use std::{fmt, mem};
 
 // ANCHOR: token
 #[derive(Debug, PartialEq)]
