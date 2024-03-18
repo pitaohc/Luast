@@ -58,6 +58,10 @@ impl ExeState {
                 ByteCode::LoadInt(dst, i) => {
                     self.set_stack(dst, Value::Integer(i as i64));
                 }
+                ByteCode::Move(dst, src) => {
+                    let v = self.stack[src as usize].clone();
+                    self.set_stack(dst, v);
+                }
                 _ => panic!("unimplemented: {:?}", code)
             }
         }

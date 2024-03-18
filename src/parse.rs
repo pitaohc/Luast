@@ -6,9 +6,11 @@ use crate::value::Value;
 
 #[derive(Debug)]
 pub struct ParseProto {
-    pub constants: Vec<Value>,
-    // 常量表
+    pub constants: Vec<Value>, // 常量表
+
     pub byte_codes: Vec<ByteCode>, // 字节码序列
+    locals: Vec<String>, // 局部变量表
+
 }
 
 /// load会读取一个lua源代码文件，调用Lex得到Token流。
@@ -18,7 +20,7 @@ pub fn load(input: File) -> ParseProto {
     let mut constants = Vec::new(); // 常量表
     let mut byte_codes = Vec::new(); // 字节码序列
     let mut lex = Lex::new(input); // 词法分析器
-
+    let mut locals = Vec::new(); // 局部变量表
     loop {
         match lex.next() {
             /*
@@ -66,6 +68,24 @@ pub fn load(input: File) -> ParseProto {
                 byte_codes.push(ByteCode::Call(0, 1));
             }
             /*
+            遇到local，定义局部变量
+            */
+            Token::Local=>{ // local name = exp
+                let var = if let Token::Name(var) = lex.next(){
+                    var
+                }else{
+                    panic!("expected variable");
+                };
+
+                if Token::Assign != lex.next(){
+                    panic!("expected '='")
+                }
+                load_exp(&mut byte_codes, &mut constants, lex.next(), locals.len());
+
+                // add to locals after load_exp()
+                locals.push(var);
+            }
+            /*
             遇到Eos，退出循环。
             */
             Token::Eos => break,
@@ -80,7 +100,7 @@ pub fn load(input: File) -> ParseProto {
 
     dbg!(&byte_codes); // 打印字节码序列
 
-    ParseProto { constants, byte_codes } // 返回ParseProto
+    ParseProto { constants, byte_codes,locals } // 返回ParseProto
 }
 
 fn load_const(constants: &mut Vec<Value>, dst: u8, v: Value) -> ByteCode {
@@ -103,4 +123,35 @@ fn add_const(constants: &mut Vec<Value>, c: Value) -> usize {
 
 pub fn get_const(constants: &Vec<Value>, id: usize) -> &Value {
     constants.get(id).unwrap()
+}
+
+
+/// 加载表达式
+///
+/// # 参数
+/// * `byte_codes` - 字节码序列
+pub fn load_exp(byte_codes: &mut Vec<ByteCode>, constants: &mut Vec<Value>,
+                locals: &Vec<String>, token: Token, dst: usize){
+    let code = match token{
+        /// TODO 完成加载其他类型的表达式
+        Token::Name(var) => load_var(constants, locals, dst, var),
+        _ => panic!("invalid argument"),
+    };
+    byte_codes.push(code);
+}
+
+
+/// 加载变量
+/// # 参数
+/// * `constants` - 常量表
+/// * `locals` - 局部变量表
+/// * `dst` - 目标栈索引
+/// * `name` - 变量名
+pub fn load_var(constants:&mut Vec<Value>,locals:&Vec<String>,dst:usize,name:String)->ByteCode{
+    if let Some(i) = locals.iter().position(|x| *x == name){
+        ByteCode::Move(dst as u8, i as u8)
+    }else{
+        let ic = add_const(constants, Value::String(name));
+        ByteCode::GetGlobal(dst as u8, ic as u8)
+    }
 }
