@@ -40,13 +40,13 @@ impl ParseProto {
         loop {
             match self.lex.next() {
                 Token::Name(name) => {
-                    if self.lex.peek() == &Token::Assign { // 全局变量命名
+                    if self.lex.peek() == &Token::Assign { // Name = exp 全局变量命名
                         self.assignment(name);
                     } else {
-                        self.function_call(name); //函数调用
+                        self.function_call(name); // Name(exp), Name String 函数调用
                     }
                 }
-                Token::Local => { self.local() }
+                Token::Local => { self.local() } // local Name = exp 局部变量命名
                 Token::Eos => break,
                 t => panic!("unexpected token: {t:?}"),
             }
@@ -104,12 +104,12 @@ impl ParseProto {
     fn assignment(&mut self, var: String) {
         self.lex.next(); // `=`
 
-        if let Some(i) = self.get_local(&var) {
+        if let Some(i) = self.get_local(&var) { // 检查左值是否是局部变量
             // local variable
             self.load_exp(i);
         } else {
             // global variable
-            let dst = self.add_const(Value::String(var)) as u8;
+            let dst = self.add_const(Value::String(var)) as u8; // 将变量名加载到常量表中，并返回索引
 
             let code = match self.lex.next() {
                 // from const values

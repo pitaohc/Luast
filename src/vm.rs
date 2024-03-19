@@ -8,7 +8,8 @@ use crate::value::Value;
 pub struct ExeState {
     globals: HashMap<String, Value>,
     // 全局变量表
-    stack: Vec<Value>, // 栈
+    stack: Vec<Value>,
+    // 栈
     func_index: usize, // 函数索引
 }
 
@@ -37,20 +38,42 @@ impl ExeState {
                         panic!("invalid global key: {name:?}");
                     }
                 }
+                ByteCode::SetGlobal(dst, src) => {
+                    let name = proto.constants[dst as usize].clone(); // 从常量表中取出名字
+                    if let Value::String(key) = name { // 如果name是String类型
+                        let value = self.stack[src as usize].clone(); // 从栈中取出值
+                        self.globals.insert(key, value);
+                    } else {
+                        panic!("invalid global key: {name:?}");
+                    }
+                }
+                ByteCode::SetGlobalConst(dst, src) => {
+                    let name = proto.constants[dst as usize].clone();
+                    if let Value::String(key) = name {
+                        let value = proto.constants[src as usize].clone();
+                        self.globals.insert(key, value);
+                    } else {
+                        panic!("invalid global key: {name:?}");
+                    }
+                }
+                ByteCode::SetGlobalGlobal(dst, src) => {
+                    let name = proto.constants[dst as usize].clone();
+                    if let Value::String(key) = name {
+                        let src = &proto.constants[src as usize];
+                        if let Value::String(src) = src {
+                            let value = self.globals.get(src).unwrap_or(&Value::Nil).clone();
+                            self.globals.insert(key, value);
+                        } else {
+                            panic!("invalid global key: {src:?}");
+                        }
+                    } else {
+                        panic!("invalid global key: {name:?}");
+                    }
+                }
                 ByteCode::LoadConst(dst, c) => {
                     let v = proto.constants[c as usize].clone();
                     self.set_stack(dst, v);
                 }
-                ByteCode::Call(func, _) => {
-                    self.func_index = func as usize;
-                    let func = &self.stack[self.func_index];
-                    if let Value::Function(f) = func {
-                        f(self);
-                    } else {
-                        panic!("invalid function: {func:?}");
-                    }
-                }
-
                 ByteCode::LoadNil(dst) => {
                     self.set_stack(dst, Value::Nil);
                 }
@@ -63,6 +86,15 @@ impl ExeState {
                 ByteCode::Move(dst, src) => {
                     let v = self.stack[src as usize].clone();
                     self.set_stack(dst, v);
+                }
+                ByteCode::Call(func, _) => {
+                    self.func_index = func as usize;
+                    let func = &self.stack[self.func_index];
+                    if let Value::Function(f) = func {
+                        f(self);
+                    } else {
+                        panic!("invalid function: {func:?}");
+                    }
                 }
                 _ => panic!("unimplemented: {:?}", code)
             }

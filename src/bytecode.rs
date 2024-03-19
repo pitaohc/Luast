@@ -3,11 +3,17 @@ use std::fmt::Formatter;
 
 /// 字节码
 /// 枚举字节码的类型
-/// 目前包含三种字节码
-/// 1. 获取全局变量
-/// 2. 加载常量
-/// 3. 调用函数
-
+/// 目前包含字节码如下
+/// * GetGlobal 把全局变量赋值给栈上值
+/// * SetGlobal 把局部变量赋值给全局变量
+/// * SetGlobalConst 把常量赋值给全局变量
+/// * SetGlobalGlobal 把全局变量赋值给全局变量
+/// * LoadConst 加载常量到栈上
+/// * LoadNil 加载Nil到栈上
+/// * LoadBool 加载Bool到栈上
+/// * LoadInt 加载Int到栈上
+/// * Move 将栈上值复制到另一个栈上
+/// * Call 调用函数
 pub enum ByteCode {
     GetGlobal(u8, u8),
     SetGlobal(u8, u8),
